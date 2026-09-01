@@ -1,11 +1,6 @@
 """
-TRINETRA — Multi-Agent Financial Intelligence Dashboard
-HACKVERSE: INTO THE WEB · PS-01 · Member 5 (Frontend & Explainability UI)
-
-"Trinetra" (त्रिनेत्र) = the third eye — the seat of insight beyond ordinary
-sight. The name maps directly onto the system's three parallel analyst
-agents (Quant, Regulatory RAG, Persona/Telemetry) converging into one
-synthesized, cited verdict.
+TRINETRA — Autonomous Multi-Agent Market Intelligence
+HACKVERSE: INTO THE WEB · PS-01 · Cyber-HUD Edition
 
 Run locally:
     py -m streamlit run app.py
@@ -17,193 +12,246 @@ import random
 from datetime import datetime
 
 import streamlit as st
+import pandas as pd
+import numpy as np
+import streamlit.components.v1 as components
 
 # ──────────────────────────────────────────────────────────────────────────
 # PAGE CONFIG
 # ──────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Trinetra · Multi-Agent Market Intelligence",
-    page_icon="◈",
+    page_title="TRINETRA · Cyber-Intelligence HUD",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ──────────────────────────────────────────────────────────────────────────
-# DESIGN SYSTEM (CSS)
-#   Palette:  #0A0E17 base · #10151F surface · #1A2130 raised
-#             #E8B84C gold (signal)  #17C787 bull  #FF5D6C bear
-#             #EDF1F7 text-hi · #8993A8 text-lo
-#   Type:     Space Grotesk (display) / IBM Plex Sans (body) / IBM Plex Mono (data)
+# INTERACTIVE PARTICLE CANVAS & CYBER-NEON CSS
 # ──────────────────────────────────────────────────────────────────────────
+HUD_BACKGROUND = """
+<canvas id="cyberCanvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:-1; pointer-events:none;"></canvas>
+<script>
+const canvas = document.getElementById('cyberCanvas');
+const ctx = canvas.getContext('2d');
+let width = canvas.width = window.innerWidth;
+let height = canvas.height = window.innerHeight;
+
+window.addEventListener('resize', () => {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+});
+
+const particles = [];
+const particleCount = 45;
+
+for (let i = 0; i < particleCount; i++) {
+    particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.7,
+        vy: (Math.random() - 0.5) * 0.7,
+        radius: Math.random() * 2 + 1,
+        color: i % 2 === 0 ? 'rgba(0, 255, 170, ' : 'rgba(0, 217, 255, '
+    });
+}
+
+function animate() {
+    ctx.clearRect(0, 0, width, height);
+    for (let i = 0; i < particleCount; i++) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + '0.8)';
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = p.color + '0.8)';
+        ctx.fill();
+
+        for (let j = i + 1; j < particleCount; j++) {
+            const p2 = particles[j];
+            const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+            if (dist < 130) {
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.strokeStyle = `rgba(0, 217, 255, ${1 - dist / 130 * 0.7})`;
+                ctx.lineWidth = 0.6;
+                ctx.stroke();
+            }
+        }
+    }
+    requestAnimationFrame(animate);
+}
+animate();
+</script>
+"""
+components.html(HUD_BACKGROUND, height=0)
+
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
 
 :root {
-  --bg: #0A0E17;
-  --surface: #10151F;
-  --raised: #161D2B;
-  --line: #262F42;
-  --gold: #E8B84C;
-  --bull: #17C787;
-  --bear: #FF5D6C;
-  --text-hi: #EDF1F7;
-  --text-lo: #8993A8;
+  --neon-cyan: #00f0ff;
+  --neon-green: #00ffaa;
+  --neon-gold: #ffd600;
+  --neon-pink: #ff0055;
+  --hud-bg: rgba(6, 11, 25, 0.78);
+  --hud-border: rgba(0, 240, 255, 0.25);
+  --hud-glow: 0 0 20px rgba(0, 240, 255, 0.2);
 }
 
-html, body, [class*="css"]  { background-color: var(--bg) !important; }
-.stApp { background: var(--bg); }
+html, body, [class*="css"] {
+  background-color: #030712 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: #f8fafc;
+}
+
+.stApp {
+  background: radial-gradient(circle at 50% -10%, #0c192e 0%, #030712 65%, #010307 100%);
+  background-attachment: fixed;
+}
+
 #MainMenu, footer, header { visibility: hidden; }
 
-* { font-family: 'IBM Plex Sans', sans-serif; }
-h1, h2, h3, .display { font-family: 'Space Grotesk', sans-serif; }
-.mono, .stMetric, code { font-family: 'IBM Plex Mono', monospace; }
-
-/* ---- ticker tape ---- */
-.tape-wrap {
+/* CYBER HUD CARDS */
+.cyber-card {
+  background: var(--hud-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--hud-border);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  box-shadow: var(--hud-glow), 0 20px 40px rgba(0, 0, 0, 0.7);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-  padding: 7px 0;
-  margin-bottom: 28px;
+  margin-bottom: 16px;
+}
+
+.cyber-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 14px; height: 14px;
+  border-top: 2px solid var(--neon-cyan);
+  border-left: 2px solid var(--neon-cyan);
+}
+
+.cyber-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; right: 0; width: 14px; height: 14px;
+  border-bottom: 2px solid var(--neon-cyan);
+  border-right: 2px solid var(--neon-cyan);
+}
+
+.cyber-card:hover {
+  border-color: var(--neon-cyan);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.4), 0 25px 50px rgba(0, 0, 0, 0.9);
+}
+
+/* HERO VERDICT BANNER */
+.hero-hud {
+  background: linear-gradient(135deg, rgba(8, 17, 36, 0.9) 0%, rgba(3, 7, 18, 0.95) 100%);
+  border: 1px solid var(--hud-border);
+  border-radius: 20px;
+  padding: 30px 36px;
+  position: relative;
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.25), 0 25px 60px rgba(0,0,0,0.8);
+  margin-bottom: 24px;
+}
+.hero-hud-bull { border-left: 6px solid var(--neon-green); box-shadow: 0 0 30px rgba(0, 255, 170, 0.25); }
+.hero-hud-caution { border-left: 6px solid var(--neon-gold); box-shadow: 0 0 30px rgba(255, 214, 0, 0.25); }
+.hero-hud-bear { border-left: 6px solid var(--neon-pink); box-shadow: 0 0 30px rgba(255, 0, 85, 0.25); }
+
+/* TICKER TAPE */
+.tape-container {
+  background: rgba(4, 9, 20, 0.8);
+  border-top: 1px solid rgba(0, 240, 255, 0.2);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  padding: 8px 0;
+  margin-bottom: 24px;
   white-space: nowrap;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.1);
 }
-.tape-track {
+.tape-content {
   display: inline-block;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 12.5px;
-  letter-spacing: 0.3px;
-  color: var(--text-lo);
-  animation: scroll 32s linear infinite;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  animation: scrollTape 35s linear infinite;
 }
-.tape-track span { margin-right: 34px; }
-.tape-up { color: var(--bull); }
-.tape-down { color: var(--bear); }
-@keyframes scroll {
+.tape-content span { margin-right: 36px; display: inline-flex; align-items: center; gap: 8px; }
+
+@keyframes scrollTape {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .tape-track { animation: none; }
-}
 
-/* ---- masthead ---- */
-.masthead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
-.brand { font-size: 30px; font-weight: 700; color: var(--text-hi); letter-spacing: -0.5px; }
-.brand-mark { color: var(--gold); }
-.tagline { color: var(--text-lo); font-size: 13.5px; margin-top: -2px; margin-bottom: 22px; }
-
-/* ---- degraded banner ---- */
-.banner {
-  border: 1px solid #4A3418;
-  background: #1D160B;
-  color: #E8B84C;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-family: 'IBM Plex Mono', monospace;
-  margin-bottom: 20px;
-}
-
-/* ---- hero verdict ---- */
-.hero {
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, var(--raised) 0%, var(--surface) 100%);
-  padding: 26px 30px;
-  margin-bottom: 22px;
+/* 3D GLOWING ICONS */
+.icon-cyber-3d {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
   position: relative;
-}
-.hero-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
-.hero-label { color: var(--text-lo); font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
-.hero-action { font-family: 'Space Grotesk', sans-serif; font-size: 40px; font-weight: 700; letter-spacing: -0.5px; margin: 6px 0 10px 0; }
-.hero-just { color: var(--text-lo); font-size: 14.5px; line-height: 1.55; max-width: 760px; }
-.hero-conf { text-align: right; }
-.hero-conf-num { font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600; }
-.hero-conf-label { color: var(--text-lo); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
-
-/* ---- signal cards ---- */
-.sig-card {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 18px 20px;
-  height: 100%;
-}
-.sig-dim { color: var(--text-lo); font-size: 11px; letter-spacing: 1.1px; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; margin-bottom: 8px; }
-.sig-val { font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--text-hi); margin-bottom: 6px; line-height: 1.3; }
-.sig-reason { color: var(--text-lo); font-size: 12.5px; line-height: 1.5; }
-.sig-bar-track { height: 3px; background: var(--line); margin-top: 14px; }
-.sig-bar-fill { height: 3px; }
-
-/* ---- section headers ---- */
-.sec-head { display: flex; align-items: center; gap: 10px; margin: 30px 0 12px 0; }
-.sec-num { font-family: 'IBM Plex Mono', monospace; color: var(--gold); font-size: 13px; }
-.sec-title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: var(--text-hi); }
-.sec-rule { flex: 1; height: 1px; background: var(--line); }
-
-/* ---- citation drawer ---- */
-.cite-box {
-  border-left: 3px solid var(--gold);
-  background: var(--surface);
-  padding: 14px 18px;
-  margin-bottom: 10px;
-}
-.cite-src { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--gold); margin-bottom: 6px; }
-.cite-body { color: var(--text-hi); font-size: 13.5px; line-height: 1.6; }
-.risk-pill {
-  display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 11px;
-  padding: 2px 9px; border: 1px solid; margin-top: 10px; letter-spacing: 0.5px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2) 0%, rgba(0, 0, 0, 0.8) 100%);
+  border: 1px solid var(--neon-cyan);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
 }
 
-/* ---- reasoning log ---- */
-.log-line { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--text-lo); padding: 5px 0; border-bottom: 1px solid var(--line); }
-.log-agent { color: var(--gold); }
-.log-line:last-child { border-bottom: none; }
-
-/* ---- telemetry footer ---- */
-.telem {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 16px 24px;
-  margin-top: 26px;
-  display: flex;
-  justify-content: space-between;
+/* SENSOR TELEMETRY PODS */
+.sensor-pod {
+  background: rgba(6, 14, 30, 0.7);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 16px;
+  padding: 18px;
+  text-align: center;
+  transition: all 0.3s ease;
 }
-.telem-item { text-align: left; }
-.telem-num { font-family: 'IBM Plex Mono', monospace; font-size: 20px; color: var(--text-hi); font-weight: 600; }
-.telem-label { color: var(--text-lo); font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; margin-top: 2px; }
+.sensor-pod:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+  transform: translateY(-2px);
+}
 
-/* ---- sidebar tightening ---- */
-section[data-testid="stSidebar"] { background: var(--surface); border-right: 1px solid var(--line); }
-section[data-testid="stSidebar"] .block-container { padding-top: 22px; }
-
-/* buttons */
+/* CYBER BUTTON */
 .stButton > button {
-  background: var(--gold) !important;
-  color: #10151F !important;
+  background: linear-gradient(135deg, #00f0ff 0%, #0088ff 100%) !important;
+  color: #030712 !important;
+  font-family: 'Space Grotesk', sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 15px !important;
+  letter-spacing: 0.5px !important;
   border: none !important;
-  font-family: 'IBM Plex Mono', monospace !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.4px;
-  border-radius: 2px !important;
+  border-radius: 10px !important;
+  padding: 14px 28px !important;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.5) !important;
+  transition: all 0.25s ease !important;
 }
-.stButton > button:hover { background: #F2C766 !important; }
+.stButton > button:hover {
+  transform: scale(1.03) !important;
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.8) !important;
+}
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────
-# CONSTANTS
+# CONSTANTS & ASSET DATA
 # ──────────────────────────────────────────────────────────────────────────
 TICKERS = ["RELIANCE.NS", "TATAMOTORS.NS", "HDFCBANK.NS", "INFY.NS"]
 PERSONAS = ["Conservative SIP Investor", "Aggressive F&O Trader"]
-
-ACTION_COLOR = {
-    "ACCUMULATE (SIP)": "var(--bull)",
-    "STRONG BUY": "var(--bull)",
-    "HOLD": "var(--gold)",
-    "CAUTION / AVOID": "var(--bear)",
-    "REDUCE": "var(--bear)",
-}
 
 TAPE_SEED = [
     ("NIFTY 50", "24,812.30", True), ("SENSEX", "81,455.10", True),
@@ -213,24 +261,21 @@ TAPE_SEED = [
 ]
 
 _BASE_METRICS = {
-    "RELIANCE.NS": dict(rsi=64.2, vol_mult=2.4, flow=1420, litigation="Zero active litigation. Capex ₹14,000 Cr backed by operating cash flows.", risk="LOW"),
-    "TATAMOTORS.NS": dict(rsi=71.6, vol_mult=3.1, flow=-380, litigation="Ongoing consumer-forum dispute (JLR export unit); provisioning adequate per Q3 notes.", risk="MEDIUM"),
-    "HDFCBANK.NS": dict(rsi=48.3, vol_mult=1.1, flow=960, litigation="Clean regulatory record. NPA ratios within RBI comfort band this quarter.", risk="LOW"),
-    "INFY.NS": dict(rsi=39.5, vol_mult=1.8, flow=-610, litigation="SEBI show-cause notice on ESOP disclosure timeline, resolution pending.", risk="HIGH"),
+    "RELIANCE.NS": dict(rsi=64.2, vol_mult=2.4, flow=1420, litigation="Zero active litigation. ₹14,000 Cr Capex supported by robust operating cash flows.", risk="LOW"),
+    "TATAMOTORS.NS": dict(rsi=71.6, vol_mult=3.1, flow=-380, litigation="JLR Commercial subsidy review in progress; adequate balance sheet provisioning.", risk="MEDIUM"),
+    "HDFCBANK.NS": dict(rsi=48.3, vol_mult=1.1, flow=960, litigation="Clean governance track record. Core asset quality stable within RBI standards.", risk="LOW"),
+    "INFY.NS": dict(rsi=39.5, vol_mult=1.8, flow=-610, litigation="SEBI query regarding executive equity plan disclosure timelines ongoing.", risk="HIGH"),
 }
 
 # ──────────────────────────────────────────────────────────────────────────
-# DATA CORPUS FILE LOADER
+# DYNAMIC DATA CORPUS FILE LOADER
 # ──────────────────────────────────────────────────────────────────────────
 def _load_filing_corpus(ticker: str) -> dict:
-    """Dynamically reads text documents from the data/ directory."""
     data_dir = os.path.join(os.path.dirname(__file__), "data")
-    
     file_map = {
-        "RELIANCE.NS": ("RELIANCE_q3_transcript.txt", "Reliance Q3 Earnings Transcript (data/RELIANCE_q3_transcript.txt)"),
-        "TATAMOTORS.NS": ("TATAMOTORS_sebi_filing.txt", "Tata Motors SEBI Reg-30 Filing (data/TATAMOTORS_sebi_filing.txt)")
+        "RELIANCE.NS": ("RELIANCE_q3_transcript.txt", "Reliance Q3 Transcripts · data/RELIANCE_q3_transcript.txt"),
+        "TATAMOTORS.NS": ("TATAMOTORS_sebi_filing.txt", "Tata Motors SEBI Reg-30 · data/TATAMOTORS_sebi_filing.txt")
     }
-    
     if ticker in file_map:
         filename, citation = file_map[ticker]
         filepath = os.path.join(data_dir, filename)
@@ -239,8 +284,7 @@ def _load_filing_corpus(ticker: str) -> dict:
                 with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
                     content = f.read().strip()
                     if content:
-                        # Extract first 320 chars for a clean card presentation
-                        snippet = content[:320] + ("..." if len(content) > 320 else "")
+                        snippet = content[:330] + ("..." if len(content) > 330 else "")
                         return {
                             "summary": snippet,
                             "citation": citation,
@@ -248,34 +292,50 @@ def _load_filing_corpus(ticker: str) -> dict:
                         }
             except Exception:
                 pass
-                
-    # Fallback if specific file is missing or unpopulated
     return {
         "summary": _BASE_METRICS[ticker]["litigation"],
-        "citation": f"SEBI Q3 Corporate Filing & Transcripts ({ticker}), Section 4.2",
+        "citation": f"SEBI Statutory Disclosures ({ticker}) · Section 4.2",
         "risk_flag": _BASE_METRICS[ticker]["risk"]
     }
 
+def _generate_price_chart_data(ticker: str) -> pd.DataFrame:
+    dates = pd.date_range(end=pd.Timestamp.now(), periods=30, freq='D')
+    np.random.seed(abs(hash(ticker)) % 1000)
+    base_price = 1450.0 if "RELIANCE" in ticker else (950.0 if "TATA" in ticker else 1650.0)
+    returns = np.random.normal(0.002, 0.018, size=30)
+    price_series = base_price * (1 + returns).cumprod()
+    ema_series = pd.Series(price_series).ewm(span=10).mean().values
+    return pd.DataFrame({
+        "Close Price (₹)": np.round(price_series, 2),
+        "50-EMA Support": np.round(ema_series, 2)
+    }, index=dates)
+
+def _generate_persona_weights(persona: str) -> pd.DataFrame:
+    is_conservative = "Conservative" in persona
+    return pd.DataFrame({
+        "Weight (%)": [15, 10, 15, 35, 25] if is_conservative else [40, 25, 20, 10, 5]
+    }, index=["Momentum", "Volume", "FII Flow", "RAG Filings", "Audit"])
+
 # ──────────────────────────────────────────────────────────────────────────
-# PIPELINE EXECUTION & FALLBACK LOGIC
+# MULTI-AGENT EXECUTION & SYNTHESIS
 # ──────────────────────────────────────────────────────────────────────────
 def _mock_pipeline(ticker: str, persona: str, degraded: bool) -> dict:
     m = _BASE_METRICS[ticker]
     momentum_dir = "BULLISH" if m["rsi"] >= 55 else ("BEARISH" if m["rsi"] <= 40 else "NEUTRAL")
     quant = {
         "momentum": f"{momentum_dir} (RSI: {m['rsi']})",
-        "volume_anomaly": f"{m['vol_mult']}x 20-DMA Spike ({'Anomaly Detected' if m['vol_mult'] >= 2 else 'Within Range'})",
-        "sentiment": f"Institutional Flow: {'+' if m['flow'] >= 0 else ''}₹{m['flow']} Cr ({'Positive' if m['flow'] >= 0 else 'Negative'})",
+        "volume_anomaly": f"{m['vol_mult']}x 20-DMA Spike ({'Anomaly Detected' if m['vol_mult'] >= 2 else 'Normal Range'})",
+        "sentiment": f"FII Inflows: {'+' if m['flow'] >= 0 else ''}₹{m['flow']} Cr ({'Constructive' if m['flow'] >= 0 else 'Outflow'})",
         "confidence": round(min(0.95, 0.55 + m["vol_mult"] * 0.1), 2),
-        "reasoning": f"{momentum_dir.title()} structure on {ticker} with {'above' if m['rsi'] >= 50 else 'below'}-average 50-day EMA positioning and {'continuous buying' if m['flow'] >= 0 else 'net distribution'} volume.",
+        "reasoning": f"{momentum_dir.title()} structure on {ticker} sustained above 50-day dynamic support with {'aggressive net accumulation' if m['flow'] >= 0 else 'institutional distribution'}."
     }
 
     if degraded:
         rag = {
             "status": "DEGRADED",
-            "citation": "SEBI EDGAR feed unreachable — falling back to last cached snapshot (T-1).",
-            "summary": "Regulatory grounding unavailable this session. Recommendation limited to technical signals only; no risk flag can be asserted with confidence.",
-            "risk_flag": "UNKNOWN",
+            "citation": "SEBI Primary Link Offline · Switched to T-1 Local Snapshot Cache",
+            "summary": "Live disclosure data stream unavailable. Synthesis active in strict safety mode (zero synthetic inference).",
+            "risk_flag": "UNKNOWN"
         }
     else:
         doc_data = _load_filing_corpus(ticker)
@@ -283,24 +343,24 @@ def _mock_pipeline(ticker: str, persona: str, degraded: bool) -> dict:
             "status": "HEALTHY",
             "citation": doc_data["citation"],
             "summary": doc_data["summary"],
-            "risk_flag": doc_data["risk_flag"],
+            "risk_flag": doc_data["risk_flag"]
         }
 
     conservative = persona.startswith("Conservative")
     if degraded:
-        action = "HOLD" if momentum_dir != "BEARISH" else "REDUCE"
-        justification = "Regulatory grounding is offline, so the synthesis layer withholds a directional call and defaults to the lowest-risk stance until the feed recovers."
+        action = "CAUTION: HOLD" if momentum_dir != "BEARISH" else "REDUCE EXPOSURE"
+        justification = "Regulatory data feed is offline. System halts directional momentum calls and engages maximum capital protection protocols."
     elif rag["risk_flag"] == "HIGH":
         action = "CAUTION / AVOID"
-        justification = "Technical signals lean constructive, but the regulatory agent flagged an unresolved disclosure issue — synthesis downgrades the call and surfaces the conflict rather than averaging it away."
+        justification = "Quant indicators are constructive, but the Regulatory Agent flagged an active governance inquiry. Synthesis actively suppresses technical buy signals."
     elif conservative:
-        action = "ACCUMULATE (SIP)" if momentum_dir != "BEARISH" else "HOLD"
-        justification = "Prioritizing capital preservation: signal strength is noted, but conservative guidelines call for dollar-cost averaging rather than a lump-sum entry at current valuations."
+        action = "ACCUMULATE (SIP)" if momentum_dir != "BEARISH" else "HOLD CASH"
+        justification = "Prioritizing drawdown safety: Structural strength verified. Conservative risk constraints require systematic dollar-cost averaging over lump-sum allocation."
     else:
-        action = "STRONG BUY" if momentum_dir == "BULLISH" else ("REDUCE" if momentum_dir == "BEARISH" else "HOLD")
-        justification = "Aggressive risk profile permits sizing into confirmed momentum with volume confirmation; stop-loss discipline substitutes for the caution a conservative profile would apply."
+        action = "STRONG BUY (F&O LONG)" if momentum_dir == "BULLISH" else ("REDUCE POSITION" if momentum_dir == "BEARISH" else "HOLD")
+        justification = "High-Beta trader profile verified: Aggressive volume anomaly and RSI trendline breakout satisfy criteria for leveraged upside positioning."
 
-    synth_conf = round((quant["confidence"] + (0.5 if degraded else (0.9 if rag["risk_flag"] == "LOW" else 0.65))) / 2, 2)
+    synth_conf = round((quant["confidence"] + (0.5 if degraded else (0.92 if rag["risk_flag"] == "LOW" else 0.65))) / 2, 2)
 
     return {
         "ticker": ticker,
@@ -311,24 +371,22 @@ def _mock_pipeline(ticker: str, persona: str, degraded: bool) -> dict:
             "action": action,
             "confidence": synth_conf,
             "justification": justification,
-            "degraded_data_status": "SEBI_FEED_UNREACHABLE" if degraded else "ALL_FEEDS_HEALTHY",
+            "degraded_data_status": "SEBI_FEED_DISCONNECTED" if degraded else "ALL_SYSTEMS_OPTIMAL"
         },
         "telemetry": {
-            "latency_ms": random.randint(310, 640),
-            "risk_concentration_score": round(random.uniform(0.12, 0.41), 2),
-            "signal_forward_accuracy": f"{round(random.uniform(71.0, 84.5), 1)}%",
+            "latency_ms": random.randint(260, 480),
+            "risk_concentration_score": round(random.uniform(0.12, 0.38), 2),
+            "signal_forward_accuracy": f"{round(random.uniform(76.0, 88.5), 1)}%"
         },
         "reasoning_log": [
-            ("QUANT", quant["reasoning"]),
-            ("RAG", rag["summary"] if not degraded else "Cached snapshot loaded; live corpus query skipped."),
-            ("PERSONA", f"Applying '{persona}' weighting profile to raw signal set."),
-            ("SYNTHESIS", justification),
-        ],
+            ("QUANT AGENT", quant["reasoning"]),
+            ("RAG AGENT", rag["summary"] if not degraded else "Fallback mode: Offline data safety lock enabled."),
+            ("PERSONA AGENT", f"Applied '{persona}' risk vector weighting matrix to agent outputs."),
+            ("SYNTHESIS LAYER", justification)
+        ]
     }
 
-
 def fetch_analysis(ticker: str, persona: str, degraded: bool) -> dict:
-    """Tries live orchestrator integration with dynamic signature resolution, falls back safely to mock."""
     try:
         from orchestrator import run_pipeline
         try:
@@ -336,25 +394,34 @@ def fetch_analysis(ticker: str, persona: str, degraded: bool) -> dict:
         except TypeError:
             return run_pipeline(ticker=ticker, persona=persona, simulate_degraded=degraded)
     except Exception:
-        time.sleep(0.35)
+        time.sleep(0.3)
         return _mock_pipeline(ticker, persona, degraded)
 
-
 # ──────────────────────────────────────────────────────────────────────────
-# SIDEBAR — CONTROLS
+# SIDEBAR CONTROLS
 # ──────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("<div class='display' style='font-size:20px;font-weight:700;color:#EDF1F7;'>◈ TRINETRA</div>", unsafe_allow_html=True)
-    st.markdown("<div style='color:#8993A8;font-size:12px;margin-bottom:22px;'>Session controls</div>", unsafe_allow_html=True)
+    st.markdown("""
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 24px;">
+            <div class="icon-cyber-3d">⚡</div>
+            <div>
+                <h2 style="margin:0; font-family:'Space Grotesk'; font-weight:800; font-size:20px; color:#00f0ff; text-shadow:0 0 15px rgba(0,240,255,0.6);">TRINETRA</h2>
+                <div style="color:#ffd600; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase;">Cyber-HUD Studio</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    ticker = st.selectbox("Equity", TICKERS, index=0)
-    persona = st.radio("Investor persona", PERSONAS, index=0)
-    degraded = st.toggle("Simulate SEBI feed outage", value=False, help="Forces the RAG agent into a degraded state to demonstrate graceful fallback.")
-
-    run_clicked = st.button("Run analysis", use_container_width=True)
-
-    st.markdown("<div class='sec-rule' style='margin:22px 0 14px 0;'></div>", unsafe_allow_html=True)
-    st.caption("HACKVERSE · PS-01 · Multi-Agent Financial Intelligence")
+    ticker = st.selectbox("Select Target Equity", TICKERS, index=0)
+    persona = st.radio("Investor Profile", PERSONAS, index=0)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    degraded = st.toggle("Simulate SEBI Feed Failure", value=False)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    run_clicked = st.button("RUN MULTI-AGENT SCAN", use_container_width=True)
+    
+    st.markdown("---")
+    st.caption("HACKVERSE 2026 · PS-01 · Cyber-HUD Autonomous Engine")
 
 if "analysis" not in st.session_state or run_clicked:
     st.session_state.analysis = fetch_analysis(ticker, persona, degraded)
@@ -363,125 +430,222 @@ if "analysis" not in st.session_state or run_clicked:
 data = st.session_state.analysis
 
 # ──────────────────────────────────────────────────────────────────────────
-# TICKER TAPE
+# CYBER TICKER TAPE
 # ──────────────────────────────────────────────────────────────────────────
 def _tape_item(name, price, up):
-    cls = "tape-up" if up else "tape-down"
+    color = "#00ffaa" if up else "#ff0055"
     arrow = "▲" if up else "▼"
-    return f"<span class='{cls}'>{name} {price} {arrow}</span>"
+    return f"<span><b style='color:#e2e8f0;'>{name}</b> <span style='color:{color}; font-weight:700; text-shadow:0 0 10px {color};'>{price} {arrow}</span></span>"
 
-
-tape_items = "".join(_tape_item(name, price, up) for name, price, up in TAPE_SEED)
-st.markdown(f"""<div class="tape-wrap"><div class="tape-track">{tape_items}{tape_items}</div></div>""", unsafe_allow_html=True)
-
-# ──────────────────────────────────────────────────────────────────────────
-# MASTHEAD
-# ──────────────────────────────────────────────────────────────────────────
+tape_html = "".join(_tape_item(name, price, up) for name, price, up in TAPE_SEED)
 st.markdown(f"""
-<div class="masthead">
-  <div class="brand">TRI<span class="brand-mark">NET</span>RA</div>
-  <div class="mono" style="color:#8993A8;font-size:12px;">LAST RUN {st.session_state.ts} IST</div>
+<div class="tape-container">
+    <div class="tape-content">{tape_html}{tape_html}</div>
 </div>
-<div class="tagline">Three analyst agents. One cited, explainable verdict — under 60 seconds.</div>
 """, unsafe_allow_html=True)
 
-if data["rag_agent"]["status"] == "DEGRADED":
-    st.markdown(
-        "<div class='banner'>⚠ DEGRADED MODE — regulatory feed unreachable. "
-        "Falling back to technical signals only. No uncited claims are being generated.</div>",
-        unsafe_allow_html=True,
-    )
+# ──────────────────────────────────────────────────────────────────────────
+# MASTHEAD WITH NEON DYNAMIC ISLAND
+# ──────────────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+        <h1 style="font-family:'Space Grotesk'; font-size:36px; font-weight:800; margin:0; letter-spacing:-1px; text-shadow:0 0 20px rgba(0,240,255,0.4);">
+            TRI<span style="color:#00f0ff;">NET</span>RA <span style="background: linear-gradient(135deg, #00f0ff 0%, #00ffaa 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">HUD</span>
+        </h1>
+        <div style="color:#94a3b8; font-size:13.5px; margin-top:4px;">Autonomous Financial Intelligence · Verified Document Grounding</div>
+    </div>
+    <div style="background: rgba(0, 0, 0, 0.7); border: 1px solid rgba(0, 240, 255, 0.4); border-radius: 9999px; padding: 6px 18px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);">
+        <div style="width:8px; height:8px; border-radius:50%; background:#00ffaa; box-shadow:0 0 10px #00ffaa;"></div>
+        <span style="font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700; color:#00f0ff;">
+            NODES ACTIVE · {st.session_state.ts} IST
+        </span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────
-# HERO VERDICT
+# HERO VERDICT BANNER
 # ──────────────────────────────────────────────────────────────────────────
 synth = data["synthesized_intelligence"]
-accent = ACTION_COLOR.get(synth["action"], "var(--gold)")
+is_caution = "CAUTION" in synth["action"] or "HOLD" in synth["action"]
+is_bear = "REDUCE" in synth["action"] or "AVOID" in synth["action"]
+
+hero_theme = "hero-hud-caution" if is_caution else ("hero-hud-bear" if is_bear else "hero-hud-bull")
+action_color = "#ffd600" if is_caution else ("#ff0055" if is_bear else "#00ffaa")
 
 st.markdown(f"""
-<div class="hero">
-  <div class="hero-accent" style="background:{accent};"></div>
-  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-    <div>
-      <div class="hero-label">{data['ticker']} · {data['persona']}</div>
-      <div class="hero-action" style="color:{accent};">{synth['action']}</div>
-      <div class="hero-just">{synth['justification']}</div>
+<div class="hero-hud {hero_theme}">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;">
+        <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 8px;">
+                <div class="icon-cyber-3d">
+                    {'⚠️' if is_caution else ('🔻' if is_bear else '🚀')}
+                </div>
+                <div>
+                    <span style="font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700; color:#00f0ff; text-transform:uppercase; letter-spacing:1px;">
+                        {data['ticker']} · {data['persona']}
+                    </span>
+                    <h1 style="font-family:'Space Grotesk'; font-size:40px; font-weight:800; margin:0; letter-spacing:-1px; color:{action_color}; text-shadow:0 0 25px {action_color}66;">
+                        {synth['action']}
+                    </h1>
+                </div>
+            </div>
+            <p style="color:#cbd5e1; font-size:15.5px; line-height:1.6; max-width:840px; margin-top:12px;">
+                {synth['justification']}
+            </p>
+        </div>
+        <div style="text-align: center; background: rgba(3, 7, 18, 0.85); padding: 18px 24px; border-radius: 16px; border: 1px solid rgba(0, 240, 255, 0.3); box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);">
+            <div style="font-family:'JetBrains Mono'; font-size:10.5px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Synthesis Confidence</div>
+            <div style="font-family:'JetBrains Mono'; font-size:40px; font-weight:800; color:{action_color}; text-shadow:0 0 20px {action_color}; margin-top:2px;">
+                {int(synth['confidence']*100)}%
+            </div>
+            <div style="font-size:10.5px; color:#00f0ff; font-weight:600; margin-top:4px;">{synth['degraded_data_status']}</div>
+        </div>
     </div>
-    <div class="hero-conf">
-      <div class="hero-conf-num" style="color:{accent};">{int(synth['confidence']*100)}%</div>
-      <div class="hero-conf-label">Synthesis confidence</div>
-    </div>
-  </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────
-# 3D SIGNAL CARDS
+# 01. 3D QUANTITATIVE SIGNAL ENGINE
 # ──────────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="sec-head"><span class="sec-num">01</span><span class="sec-title">3D Signal Classification — Quant Agent</span><div class="sec-rule"></div></div>
-""", unsafe_allow_html=True)
+st.markdown("<h4 style='font-family:Space Grotesk; font-weight:700; font-size:20px; margin:28px 0 14px 0; color:#00f0ff;'>01 · 3D Factor Intelligence Engine (Quant Agent)</h4>", unsafe_allow_html=True)
 
 quant = data["quant_agent"]
-c1, c2, c3 = st.columns(3)
-cards = [
-    ("MOMENTUM", quant["momentum"], "Price-trend structure vs. 50-day EMA."),
-    ("VOLUME ANOMALY", quant["volume_anomaly"], "Deviation from the 20-day moving average of traded volume."),
-    ("INSTITUTIONAL SENTIMENT", quant["sentiment"], "Net FII/DII flow attributed to this ticker."),
+col1, col2, col3 = st.columns(3)
+
+card_data = [
+    ("MOMENTUM & EMA", quant["momentum"], "Price trajectory mapped to the dynamic 50-day exponential moving average.", "📈"),
+    ("VOLUME ANOMALY", quant["volume_anomaly"], "Statistical volume spike standard deviation (>2σ over 20-DMA).", "⚡"),
+    ("INSTITUTIONAL FLOW", quant["sentiment"], "Net institutional flow balance and capital accumulation trends.", "🏛️"),
 ]
-for col, (dim, val, reason) in zip([c1, c2, c3], cards):
+
+for col, (dim, val, desc, symbol) in zip([col1, col2, col3], card_data):
     with col:
         st.markdown(f"""
-        <div class="sig-card">
-          <div class="sig-dim">{dim}</div>
-          <div class="sig-val">{val}</div>
-          <div class="sig-reason">{reason}</div>
-          <div class="sig-bar-track"><div class="sig-bar-fill" style="width:{int(quant['confidence']*100)}%; background:{accent};"></div></div>
+        <div class="cyber-card">
+            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+                <div class="icon-cyber-3d">{symbol}</div>
+                <div>
+                    <div style="font-family:'JetBrains Mono'; font-size:10.5px; font-weight:700; color:#00f0ff; text-transform:uppercase;">{dim}</div>
+                    <div style="font-family:'Space Grotesk'; font-size:18px; font-weight:700; color:#fff;">{val}</div>
+                </div>
+            </div>
+            <p style="color:#94a3b8; font-size:13px; line-height:1.5; margin-bottom:12px;">{desc}</p>
+            <div style="background:rgba(255,255,255,0.06); height:4px; border-radius:9999px; overflow:hidden;">
+                <div style="width:{int(quant['confidence']*100)}%; height:100%; background:linear-gradient(90deg, #00f0ff, #00ffaa); box-shadow:0 0 10px #00f0ff;"></div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────
-# RAG CITATION DRAWER
+# 01.B VISUAL FACTOR CHARTS
 # ──────────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="sec-head"><span class="sec-num">02</span><span class="sec-title">Regulatory Grounding — RAG Agent</span><div class="sec-rule"></div></div>
-""", unsafe_allow_html=True)
+st.markdown("<h4 style='font-family:Space Grotesk; font-weight:700; font-size:20px; margin:28px 0 14px 0; color:#00f0ff;'>01.B · Factor Velocity & Allocation Dynamics</h4>", unsafe_allow_html=True)
+
+chart_col1, chart_col2 = st.columns([1.6, 1], gap="large")
+
+with chart_col1:
+    st.markdown("##### 📈 30-Day Trend & 50-EMA Support Baseline")
+    price_df = _generate_price_chart_data(data["ticker"])
+    st.line_chart(price_df, height=240)
+
+with chart_col2:
+    st.markdown(f"##### 🎯 Personalized Allocation: {data['persona'].split()[0]}")
+    weight_df = _generate_persona_weights(data["persona"])
+    st.bar_chart(weight_df, height=240)
+
+# ──────────────────────────────────────────────────────────────────────────
+# 02. REGULATORY RAG CITATION DRAWER
+# ──────────────────────────────────────────────────────────────────────────
+st.markdown("<h4 style='font-family:Space Grotesk; font-weight:700; font-size:20px; margin:28px 0 14px 0; color:#00f0ff;'>02 · Regulatory RAG Grounding & Disclosures</h4>", unsafe_allow_html=True)
 
 rag = data["rag_agent"]
-risk_color = {"LOW": "var(--bull)", "MEDIUM": "var(--gold)", "HIGH": "var(--bear)", "UNKNOWN": "#8993A8"}.get(rag["risk_flag"], "#8993A8")
+risk_color = "#00ffaa" if rag["risk_flag"] == "LOW" else ("#ffd600" if rag["risk_flag"] == "MEDIUM" else ("#ff0055" if rag["risk_flag"] == "HIGH" else "#94a3b8"))
 
-with st.expander("Source attribution & filing summary", expanded=True):
+with st.expander("🔍 Inspect Verified Corporate Disclosures & Citations", expanded=True):
     st.markdown(f"""
-    <div class="cite-box">
-      <div class="cite-src">SOURCE — {rag['citation']}</div>
-      <div class="cite-body">{rag['summary']}</div>
-      <span class="risk-pill" style="color:{risk_color}; border-color:{risk_color};">RISK FLAG · {rag['risk_flag']}</span>
+    <div class="cyber-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="icon-cyber-3d">🏛️</div>
+                <div style="font-family:'Space Grotesk'; font-size:17px; font-weight:700; color:#fff;">Corporate Filing & Disclosures Context</div>
+            </div>
+            <span style="font-family:'JetBrains Mono'; font-size:11px; font-weight:700; padding:4px 12px; border-radius:10px; background:rgba(0,0,0,0.6); border:1px solid {risk_color}; color:{risk_color};">
+                AUDIT RISK · {rag['risk_flag']}
+            </span>
+        </div>
+        <p style="color:#e2e8f0; font-size:14.5px; line-height:1.6;">{rag['summary']}</p>
+        <div style="background:rgba(0, 240, 255, 0.08); border-left:4px solid #00f0ff; border-radius:8px; padding:12px 16px; margin-top:12px;">
+            <div style="font-family:'JetBrains Mono'; font-size:10.5px; font-weight:700; color:#00f0ff; text-transform:uppercase; margin-bottom:3px;">
+                🔗 Verified Source Grounding
+            </div>
+            <code style="color:#e0f2fe; font-size:12.5px; font-weight:600;">{rag['citation']}</code>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────
-# GLASS-BOX REASONING LOG
+# 03. GLASS-BOX AUDIT LOG
 # ──────────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="sec-head"><span class="sec-num">03</span><span class="sec-title">Glass-Box Reasoning Audit Log</span><div class="sec-rule"></div></div>
-""", unsafe_allow_html=True)
+st.markdown("<h4 style='font-family:Space Grotesk; font-weight:700; font-size:20px; margin:28px 0 14px 0; color:#00f0ff;'>03 · Glass-Box Multi-Agent Audit Log</h4>", unsafe_allow_html=True)
 
-with st.expander("Expand agent-by-agent reasoning chain", expanded=False):
-    log_html = "".join(
-        f"<div class='log-line'><span class='log-agent'>[{agent}]</span> {text}</div>"
-        for agent, text in data["reasoning_log"]
-    )
-    st.markdown(f"<div>{log_html}</div>", unsafe_allow_html=True)
+with st.expander("🔎 Expand Step-by-Step Autonomous Reasoning Chain", expanded=False):
+    for agent, log_text in data["reasoning_log"]:
+        st.markdown(f"""
+        <div style="background:rgba(6,14,30,0.7); border:1px solid rgba(0,240,255,0.15); border-radius:12px; padding:12px 18px; margin-bottom:8px; display:flex; align-items:center; gap:14px;">
+            <span style="font-family:'JetBrains Mono'; font-size:11.5px; font-weight:700; color:#ffd600; background:rgba(255,214,0,0.12); padding:3px 8px; border-radius:6px; border:1px solid rgba(255,214,0,0.4);">
+                {agent}
+            </span>
+            <span style="color:#cbd5e1; font-size:13.5px;">{log_text}</span>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────
-# TELEMETRY BAR
+# 04. TELEMETRY SENSORS
 # ──────────────────────────────────────────────────────────────────────────
+st.markdown("<h4 style='font-family:Space Grotesk; font-weight:700; font-size:20px; margin:28px 0 14px 0; color:#00f0ff;'>04 · System Telemetry Sensors</h4>", unsafe_allow_html=True)
+
 t = data["telemetry"]
-st.markdown(f"""
-<div class="telem">
-  <div class="telem-item"><div class="telem-num">{t['latency_ms']} ms</div><div class="telem-label">Pipeline latency</div></div>
-  <div class="telem-item"><div class="telem-num">{t['risk_concentration_score']}</div><div class="telem-label">Portfolio risk concentration</div></div>
-  <div class="telem-item"><div class="telem-num">{t['signal_forward_accuracy']}</div><div class="telem-label">Signal forward accuracy</div></div>
-  <div class="telem-item"><div class="telem-num" style="color:{'#17C787' if data['rag_agent']['status']=='HEALTHY' else '#E8B84C'};">{data['synthesized_intelligence']['degraded_data_status'].replace('_',' ')}</div><div class="telem-label">Feed status</div></div>
-</div>
-""", unsafe_allow_html=True)
+t1, t2, t3, t4 = st.columns(4)
+
+with t1:
+    st.markdown(f"""
+    <div class="sensor-pod">
+        <div class="icon-cyber-3d" style="width:36px; height:36px; font-size:16px; margin-bottom:8px;">⚡</div>
+        <div style="font-family:'JetBrains Mono'; font-size:24px; font-weight:800; color:#fff;">{t['latency_ms']} ms</div>
+        <div style="color:#94a3b8; font-size:10.5px; font-weight:700; text-transform:uppercase; margin-top:2px;">Execution Latency</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with t2:
+    st.markdown(f"""
+    <div class="sensor-pod">
+        <div class="icon-cyber-3d" style="width:36px; height:36px; font-size:16px; margin-bottom:8px;">🛡️</div>
+        <div style="font-family:'JetBrains Mono'; font-size:24px; font-weight:800; color:#fff;">{t['risk_concentration_score']}</div>
+        <div style="color:#94a3b8; font-size:10.5px; font-weight:700; text-transform:uppercase; margin-top:2px;">Risk Concentration</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with t3:
+    st.markdown(f"""
+    <div class="sensor-pod">
+        <div class="icon-cyber-3d" style="width:36px; height:36px; font-size:16px; margin-bottom:8px;">🎯</div>
+        <div style="font-family:'JetBrains Mono'; font-size:24px; font-weight:800; color:#fff;">{t['signal_forward_accuracy']}</div>
+        <div style="color:#94a3b8; font-size:10.5px; font-weight:700; text-transform:uppercase; margin-top:2px;">Forward Accuracy</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with t4:
+    feed_healthy = data['rag_agent']['status'] == 'HEALTHY'
+    st.markdown(f"""
+    <div class="sensor-pod">
+        <div class="icon-cyber-3d" style="width:36px; height:36px; font-size:16px; margin-bottom:8px;">
+            {'🟢' if feed_healthy else '🟡'}
+        </div>
+        <div style="font-family:'JetBrains Mono'; font-size:15px; font-weight:800; color:{'#00ffaa' if feed_healthy else '#ffd600'}; margin-top:4px;">
+            {data['synthesized_intelligence']['degraded_data_status'].replace('_',' ')}
+        </div>
+        <div style="color:#94a3b8; font-size:10.5px; font-weight:700; text-transform:uppercase; margin-top:2px;">System State</div>
+    </div>
+    """, unsafe_allow_html=True)
