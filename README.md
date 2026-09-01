@@ -61,7 +61,7 @@ graph TD
 
 ---
 
-When parv, utsav and madhvav complete their respective modules, they plug directly into `orchestrator.py` via custom providers:
+When parv, utsav and madhav complete their respective modules, they plug directly into `orchestrator.py` via custom providers:
 
 ```python
 from orchestrator import FinancialIntelligenceOrchestrator
