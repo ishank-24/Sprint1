@@ -80,7 +80,7 @@ result = orchestrator.execute_pipeline("RELIANCE", "p_aggressive", degraded_mode
 - **Parv (Technicals):** Must accept `(ticker: str, degraded: bool = False)` and return dict with `{"signal": "BULLISH"|"BEARISH"|"NEUTRAL", "confidence": float, "indicators": dict, "citations": list}`.
 - **Utsav (RAG/SEBI):** Must accept `(ticker: str, degraded: bool = False)` and return dict with `{"sentiment": "POSITIVE"|"CAUTIOUS"|"NEGATIVE", "document_chunks": list, "citations": list}`.
 - **Madhav (User Risk):** Must accept `(persona_id: str)` and return dict with `{"risk_tolerance": "CONSERVATIVE"|"MODERATE"|"AGGRESSIVE", "max_single_stock_allocation_pct": float, "current_portfolio": dict}`.
-- **Ishank (Frontend & Explainability UI): ** Live Signals, Reasoning Traces, Portfolio
+- **Ishank (Frontend & Explainability UI):** Live Signals, Reasoning Traces, Portfolio
 
 ---
 
