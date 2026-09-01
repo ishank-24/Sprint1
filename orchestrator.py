@@ -26,6 +26,7 @@ from synthesis_engine import SynthesisEngine
 from metrics_logger import session_logger
 from persona_telemetry import calculate_portfolio_hhi
 
+
 class FinancialIntelligenceOrchestrator:
     """
     Central orchestration engine coordinating specialized agents.
@@ -131,16 +132,16 @@ class FinancialIntelligenceOrchestrator:
         max_allowed = profile_result.get("max_single_stock_allocation_pct", 10.0)
         
         # Calculate HHI portfolio concentration metric
-portfolio_hhi = calculate_portfolio_hhi(portfolio)
+        portfolio_hhi = calculate_portfolio_hhi(portfolio)
 
-portfolio_impact = {
-    "risk_concentration_score": portfolio_hhi,
-    "portfolio_hhi": portfolio_hhi,
-    "current_allocation_pct": current_alloc,
-    "max_allowed_allocation_pct": max_allowed,
-    "concentration_flag": "OVER_LIMIT" if current_alloc >= max_allowed else "HEALTHY",
-    "sources_count": len(synthesis.get("source_attributions", []))
-}
+        portfolio_impact = {
+            "risk_concentration_score": portfolio_hhi,
+            "portfolio_hhi": portfolio_hhi,
+            "current_allocation_pct": current_alloc,
+            "max_allowed_allocation_pct": max_allowed,
+            "concentration_flag": "OVER_LIMIT" if current_alloc >= max_allowed else "HEALTHY",
+            "sources_count": len(synthesis.get("source_attributions", []))
+        }
 
         # 4. Session Metrics Logging
         end_time = time.perf_counter()
@@ -239,4 +240,3 @@ if __name__ == "__main__":
     print(f"Recommendation: {res2['synthesized_intelligence']['recommendation']}")
     print(f"Summary: {res2['synthesized_intelligence']['executive_summary']}")
     print(f"Data Completeness: {res2['performance_metrics']['data_completeness_score']}")
-
