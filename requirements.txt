@@ -1,1 +1,9 @@
-
+sentence-transformers
+faiss-cpu
+numpy
+pandas
+pydantic
+python-dotenv
+streamlit
+torch
+scikit-learn
