@@ -11,6 +11,7 @@ Run locally:
     py -m streamlit run app.py
 """
 
+import os
 import time
 import random
 from datetime import datetime
@@ -211,9 +212,6 @@ TAPE_SEED = [
     ("BANK NIFTY", "51,904.65", True), ("USD/INR", "83.42", False),
 ]
 
-# ──────────────────────────────────────────────────────────────────────────
-# MOCK BACKEND (used until orchestrator.run_pipeline is wired in)
-# ──────────────────────────────────────────────────────────────────────────
 _BASE_METRICS = {
     "RELIANCE.NS": dict(rsi=64.2, vol_mult=2.4, flow=1420, litigation="Zero active litigation. Capex ₹14,000 Cr backed by operating cash flows.", risk="LOW"),
     "TATAMOTORS.NS": dict(rsi=71.6, vol_mult=3.1, flow=-380, litigation="Ongoing consumer-forum dispute (JLR export unit); provisioning adequate per Q3 notes.", risk="MEDIUM"),
@@ -221,7 +219,46 @@ _BASE_METRICS = {
     "INFY.NS": dict(rsi=39.5, vol_mult=1.8, flow=-610, litigation="SEBI show-cause notice on ESOP disclosure timeline, resolution pending.", risk="HIGH"),
 }
 
+# ──────────────────────────────────────────────────────────────────────────
+# DATA CORPUS FILE LOADER
+# ──────────────────────────────────────────────────────────────────────────
+def _load_filing_corpus(ticker: str) -> dict:
+    """Dynamically reads text documents from the data/ directory."""
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    
+    file_map = {
+        "RELIANCE.NS": ("RELIANCE_q3_transcript.txt", "Reliance Q3 Earnings Transcript (data/RELIANCE_q3_transcript.txt)"),
+        "TATAMOTORS.NS": ("TATAMOTORS_sebi_filing.txt", "Tata Motors SEBI Reg-30 Filing (data/TATAMOTORS_sebi_filing.txt)")
+    }
+    
+    if ticker in file_map:
+        filename, citation = file_map[ticker]
+        filepath = os.path.join(data_dir, filename)
+        if os.path.exists(filepath):
+            try:
+                with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read().strip()
+                    if content:
+                        # Extract first 320 chars for a clean card presentation
+                        snippet = content[:320] + ("..." if len(content) > 320 else "")
+                        return {
+                            "summary": snippet,
+                            "citation": citation,
+                            "risk_flag": "LOW" if "RELIANCE" in ticker else "MEDIUM"
+                        }
+            except Exception:
+                pass
+                
+    # Fallback if specific file is missing or unpopulated
+    return {
+        "summary": _BASE_METRICS[ticker]["litigation"],
+        "citation": f"SEBI Q3 Corporate Filing & Transcripts ({ticker}), Section 4.2",
+        "risk_flag": _BASE_METRICS[ticker]["risk"]
+    }
 
+# ──────────────────────────────────────────────────────────────────────────
+# PIPELINE EXECUTION & FALLBACK LOGIC
+# ──────────────────────────────────────────────────────────────────────────
 def _mock_pipeline(ticker: str, persona: str, degraded: bool) -> dict:
     m = _BASE_METRICS[ticker]
     momentum_dir = "BULLISH" if m["rsi"] >= 55 else ("BEARISH" if m["rsi"] <= 40 else "NEUTRAL")
@@ -241,11 +278,12 @@ def _mock_pipeline(ticker: str, persona: str, degraded: bool) -> dict:
             "risk_flag": "UNKNOWN",
         }
     else:
+        doc_data = _load_filing_corpus(ticker)
         rag = {
             "status": "HEALTHY",
-            "citation": f"SEBI Q3 Corporate Filing & Transcripts ({ticker}), Section 4.2",
-            "summary": m["litigation"],
-            "risk_flag": m["risk"],
+            "citation": doc_data["citation"],
+            "summary": doc_data["summary"],
+            "risk_flag": doc_data["risk_flag"],
         }
 
     conservative = persona.startswith("Conservative")
@@ -290,13 +328,15 @@ def _mock_pipeline(ticker: str, persona: str, degraded: bool) -> dict:
 
 
 def fetch_analysis(ticker: str, persona: str, degraded: bool) -> dict:
-    """Tries the live multi-agent pipeline first, falls back to the mock model.
-    This keeps the UI fully demoable before orchestrator.py / agents/* land."""
+    """Tries live orchestrator integration with dynamic signature resolution, falls back safely to mock."""
     try:
-        from orchestrator import run_pipeline  # Member 1's integration point
-        return run_pipeline(ticker=ticker, persona=persona, simulate_degraded=degraded)
+        from orchestrator import run_pipeline
+        try:
+            return run_pipeline(ticker=ticker, persona_id=persona, force_degrade=degraded)
+        except TypeError:
+            return run_pipeline(ticker=ticker, persona=persona, simulate_degraded=degraded)
     except Exception:
-        time.sleep(0.35)  # feel like a real round trip
+        time.sleep(0.35)
         return _mock_pipeline(ticker, persona, degraded)
 
 
