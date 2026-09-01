@@ -3,6 +3,14 @@ test_orchestrator.py
 --------------------
 Hackathon Deliverable Verification Suite for Member 1 (Orchestrator).
 """
+import sys
+import os
+
+# Add parent directory to sys.path so it finds orchestrator.py
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+import unittest
+from orchestrator import run_pipeline
 
 import unittest
 from orchestrator import run_pipeline
