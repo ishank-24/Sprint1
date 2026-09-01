@@ -1,9 +1,10 @@
-sentence-transformers
-faiss-cpu
-numpy
+streamlit
 pandas
+numpy
 pydantic
 python-dotenv
-streamlit
+sentence-transformers
+faiss-cpu
 torch
 scikit-learn
+pytest
